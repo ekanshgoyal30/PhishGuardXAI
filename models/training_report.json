@@ -1,0 +1,149 @@
+{
+  "accuracy": 1.0,
+  "f1_score": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "roc_auc": 1.0,
+  "false_pos_rate": 0.0,
+  "cv_f1_mean": 1.0,
+  "cv_f1_std": 0.0,
+  "n_train": 42,
+  "n_test": 11,
+  "n_features": 37,
+  "model_type": "XGBoostClassifier",
+  "xai_method": "SHAP TreeExplainer",
+  "top_features": [
+    {
+      "name": "url_has_https",
+      "importance": 0.3026
+    },
+    {
+      "name": "sender_has_hyphen",
+      "importance": 0.2942
+    },
+    {
+      "name": "url_hyphen_count",
+      "importance": 0.1834
+    },
+    {
+      "name": "sender_is_legit",
+      "importance": 0.1084
+    },
+    {
+      "name": "authority_count",
+      "importance": 0.062
+    },
+    {
+      "name": "urgency_count",
+      "importance": 0.0161
+    },
+    {
+      "name": "social_eng_score",
+      "importance": 0.0153
+    },
+    {
+      "name": "url_url_length",
+      "importance": 0.0122
+    },
+    {
+      "name": "caps_ratio",
+      "importance": 0.004
+    },
+    {
+      "name": "subject_caps_ratio",
+      "importance": 0.0018
+    },
+    {
+      "name": "threat_count",
+      "importance": 0.0
+    },
+    {
+      "name": "pii_count",
+      "importance": 0.0
+    },
+    {
+      "name": "secrecy_count",
+      "importance": 0.0
+    },
+    {
+      "name": "financial_count",
+      "importance": 0.0
+    },
+    {
+      "name": "macro_count",
+      "importance": 0.0
+    }
+  ],
+  "shap_global": [
+    {
+      "name": "sender_has_hyphen",
+      "shap": 2.3169
+    },
+    {
+      "name": "url_has_https",
+      "shap": 0.2261
+    },
+    {
+      "name": "url_hyphen_count",
+      "shap": 0.0723
+    },
+    {
+      "name": "authority_count",
+      "shap": 0.0702
+    },
+    {
+      "name": "url_url_length",
+      "shap": 0.0491
+    },
+    {
+      "name": "sender_is_legit",
+      "shap": 0.0489
+    },
+    {
+      "name": "urgency_count",
+      "shap": 0.0219
+    },
+    {
+      "name": "social_eng_score",
+      "shap": 0.0203
+    },
+    {
+      "name": "caps_ratio",
+      "shap": 0.0144
+    },
+    {
+      "name": "subject_caps_ratio",
+      "shap": 0.0098
+    },
+    {
+      "name": "threat_count",
+      "shap": 0.0
+    },
+    {
+      "name": "pii_count",
+      "shap": 0.0
+    },
+    {
+      "name": "secrecy_count",
+      "shap": 0.0
+    },
+    {
+      "name": "financial_count",
+      "shap": 0.0
+    },
+    {
+      "name": "macro_count",
+      "shap": 0.0
+    }
+  ],
+  "confusion_matrix": [
+    [
+      5,
+      0
+    ],
+    [
+      0,
+      6
+    ]
+  ]
+}
