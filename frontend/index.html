@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishGuard XAI — Real ML Detection System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b12;
+  --s1: #0d1220;
+  --s2: #131b2e;
+  --s3: #1a2540;
+  --border: #1e3050;
+  --accent: #00d4ff;
+  --a2: #ff3c6e;
+  --a3: #ffd166;
+  --safe: #06d6a0;
+  --warn: #ffd166;
+  --danger: #ff3c6e;
+  --text: #e4edf8;
+  --muted: #4a6a8a;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(0,212,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 80%, rgba(255,60,110,0.03) 0%, transparent 60%),
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px) 0 0 / 36px 36px;
+  pointer-events: none; z-index:0;
+}
+.wrap { position:relative; z-index:2; }
+
+/* ── HEADER ──────────────────────── */
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px;
+  background:rgba(8,11,18,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:200;
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.logo-mark {
+  width:34px; height:34px;
+  background:linear-gradient(135deg,var(--accent),var(--a2));
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px;
+}
+.logo-name { font-size:18px; font-weight:800; letter-spacing:-0.5px; }
+.logo-name em { color:var(--accent); font-style:normal; }
+.logo-tag { font-size:9px; font-family:var(--mono); color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+
+.hdr-right { display:flex; align-items:center; gap:20px; }
+.hstat { text-align:right; }
+.hstat-n { font-family:var(--mono); font-size:15px; font-weight:700; }
+.hstat-l { font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.live-badge {
+  display:flex; align-items:center; gap:7px;
+  padding:5px 13px;
+  border:1px solid var(--safe);
+  border-radius:20px;
+  font-size:11px; font-family:var(--mono); color:var(--safe);
+}
+.dot { width:7px; height:7px; border-radius:50%; background:var(--safe); animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(6,214,160,.5)} 50%{opacity:.6;box-shadow:0 0 0 5px rgba(6,214,160,0)} }
+
+/* ── LAYOUT ──────────────────────── */
+.layout { display:grid; grid-template-columns:320px 1fr 280px; min-height:calc(100vh - 62px); }
+
+/* ── PANEL BASE ─────────────────── */
+.panel { padding:20px 18px; }
+.panel-title {
+  font-size:9px; font-family:var(--mono); color:var(--muted);
+  text-transform:uppercase; letter-spacing:2px; margin-bottom:12px;
+}
+
+/* ── LEFT SIDEBAR ───────────────── */
+.left { border-right:1px solid var(--border); display:flex; flex-direction:column; gap:16px; }
+
+.card {
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:12px; overflow:hidden;
+}
+.card-body { padding:16px; }
+
+.ch-tabs { display:flex; gap:4px; margin-bottom:12px; }
+.chtab {
+  flex:1; padding:6px 4px;
+  border:1px solid var(--border);
+  border-radius:6px; background:transparent;
+  color:var(--muted); font-family:var(--mono); font-size:11px;
+  cursor:pointer; transition:all .2s; text-align:center;
+}
+.chtab.on { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; }
+.chtab:hover:not(.on) { border-color:var(--accent); color:var(--accent); }
+
+textarea.inp {
+  width:100%; min-height:130px;
+  background:var(--s2); border:1px solid var(--border);
+  border-radius:8px; color:var(--text);
+  font-family:var(--mono); font-size:11.5px; line-height:1.65;
+  padding:11px; outline:none; resize:vertical;
+  transition:border-color .2s;
+}
+textarea.inp:focus { border-color:var(--accent); }
+textarea.inp::placeholder { color:var(--muted); }
+
+.meta { display:flex; gap:7px; margin-top:7px; }
+input.mini {
+  flex:1; background:var(--s2); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--mono); font-size:11px;
+  padding:7px 9px; outline:none; transition:border-color .2s;
+}
+input.mini:focus { border-color:var(--accent); }
+input.mini::placeholder { color:var(--muted); }
+
+.btn-analyze {
+  width:100%; margin-top:11px; padding:12px;
+  background:linear-gradient(135deg,var(--accent),#0088bb);
+  border:none; border-radius:8px; color:var(--bg);
+  font-family:var(--sans); font-size:13px; font-weight:700;
+  cursor:pointer; transition:all .2s; letter-spacing:.3px;
+  position:relative; overflow:hidden;
+}
+.btn-analyze:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,212,255,.25); }
+.btn-analyze:active { transform:none; }
+.btn-analyze.busy { pointer-events:none; opacity:.8; }
+.btn-analyze.busy::after {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  animation:shim 1s infinite;
+}
+@keyframes shim { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+
+/* API status */
+.api-status {
+  display:flex; align-items:center; gap:7px;
+  padding:8px 12px;
+  border-radius:8px; font-family:var(--mono); font-size:11px;
+  border:1px solid;
+}
+.api-status.connected { color:var(--safe); border-color:rgba(6,214,160,.3); background:rgba(6,214,160,.05); }
+.api-status.disconnected { color:var(--warn); border-color:rgba(255,209,102,.3); background:rgba(255,209,102,.05); }
+
+/* Samples */
+.sample {
+  padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  cursor:pointer; margin-bottom:7px; transition:all .2s;
+}
+.sample:last-child { margin-bottom:0; }
+.sample:hover { border-color:var(--accent); background:rgba(0,212,255,.03); }
+.sbadge {
+  font-size:9px; font-family:var(--mono); font-weight:700;
+  padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px;
+}
+.sp { color:var(--danger); background:rgba(255,60,110,.15); }
+.sw { color:var(--warn); background:rgba(255,209,102,.15); }
+.ss { color:var(--safe); background:rgba(6,214,160,.12); }
+.stitle { font-size:12px; font-weight:600; }
+.sdesc { font-size:10px; font-family:var(--mono); color:var(--muted); margin-top:2px; }
+
+/* ── CENTER ─────────────────────── */
+.center { padding:24px; display:flex; flex-direction:column; gap:18px; overflow-y:auto; }
+
+.empty {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:420px; text-align:center; gap:14px;
+}
+.empty-icon { font-size:56px; opacity:.1; }
+.empty-title { font-size:18px; font-weight:700; color:var(--muted); }
+.empty-sub { font-size:12px; color:var(--muted); font-family:var(--mono); max-width:280px; line-height:1.6; }
+
+/* Result */
+.result-card {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden;
+  animation:fadeUp .4s ease forwards;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+
+.verdict {
+  padding:20px 22px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.verdict.d { background:linear-gradient(135deg,rgba(255,60,110,.1),transparent); border-bottom-color:rgba(255,60,110,.25); }
+.verdict.w { background:linear-gradient(135deg,rgba(255,209,102,.08),transparent); border-bottom-color:rgba(255,209,102,.2); }
+.verdict.s { background:linear-gradient(135deg,rgba(6,214,160,.06),transparent); border-bottom-color:rgba(6,214,160,.15); }
+
+.v-left { display:flex; align-items:center; gap:14px; }
+.v-icon { font-size:32px; }
+.v-label { font-size:22px; font-weight:800; }
+.v-sub { font-size:12px; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+
+.v-score { text-align:right; }
+.v-num { font-size:46px; font-weight:800; font-family:var(--mono); line-height:1; }
+.v-num-label { font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; }
+
+/* Score bar */
+.sbar-wrap { padding:14px 22px; border-bottom:1px solid var(--border); }
+.sbar-track { height:7px; background:var(--s3); border-radius:4px; overflow:hidden; }
+.sbar-fill { height:100%; border-radius:4px; transition:width 1.1s cubic-bezier(.25,1,.5,1); }
+.sbar-labels { display:flex; justify-content:space-between; margin-top:5px; font-size:9px; font-family:var(--mono); color:var(--muted); }
+
+/* Indicators */
+.inds { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--border); }
+.ind { padding:14px 16px; text-align:center; border-right:1px solid var(--border); }
+.ind:last-child { border-right:none; }
+.ind-val { font-size:20px; font-weight:800; font-family:var(--mono); }
+.ind-name { font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+.ind-bar { height:3px; background:var(--s3); border-radius:2px; margin-top:7px; overflow:hidden; }
+.ind-fill { height:100%; border-radius:2px; transition:width 1s ease; }
+
+/* Tags */
+.tags { display:flex; flex-wrap:wrap; gap:7px; padding:14px 22px; border-bottom:1px solid var(--border); }
+.tag {
+  padding:4px 11px; border-radius:20px; font-size:10px;
+  font-family:var(--mono); font-weight:700; border:1px solid;
+}
+.td { color:var(--danger); border-color:rgba(255,60,110,.35); background:rgba(255,60,110,.07); }
+.tw { color:var(--warn); border-color:rgba(255,209,102,.35); background:rgba(255,209,102,.07); }
+.ts { color:var(--safe); border-color:rgba(6,214,160,.25); background:rgba(6,214,160,.05); }
+.ti { color:var(--accent); border-color:rgba(0,212,255,.25); background:rgba(0,212,255,.05); }
+
+/* Highlighted text */
+.hl-box {
+  margin:0 22px 18px; background:var(--s2); border:1px solid var(--border);
+  border-radius:9px; padding:13px 15px;
+  font-family:var(--mono); font-size:11.5px; line-height:1.75;
+  max-height:150px; overflow-y:auto; white-space:pre-wrap;
+}
+.hd { background:rgba(255,60,110,.22); color:#ff7a96; border-radius:3px; padding:0 2px; cursor:help; }
+.hw { background:rgba(255,209,102,.2); color:#ffd166; border-radius:3px; padding:0 2px; }
+
+/* XAI sections */
+.xai-section { padding:18px 22px; border-top:1px solid var(--border); }
+.xai-head { font-size:12px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.xai-head::before { content:''; width:3px; height:14px; border-radius:2px; flex-shrink:0; }
+.xai-head.blue::before { background:var(--accent); }
+.xai-head.pink::before { background:var(--a2); }
+
+/* Feature bars */
+.feat-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.feat-name { font-size:11px; font-family:var(--mono); color:var(--text); min-width:190px; }
+.feat-track { flex:1; height:18px; background:var(--s3); border-radius:3px; overflow:hidden; }
+.feat-fill {
+  height:100%; border-radius:3px;
+  display:flex; align-items:center; padding-left:6px;
+  font-size:9px; font-family:var(--mono); font-weight:700; color:var(--bg);
+  transition:width 1.2s cubic-bezier(.25,1,.5,1);
+}
+.feat-pct { font-size:10px; font-family:var(--mono); color:var(--muted); min-width:40px; text-align:right; }
+
+/* SHAP waterfall */
+.shap-row {
+  display:flex; align-items:center; gap:10px; margin-bottom:7px;
+  opacity:0; transform:translateX(-8px);
+  animation:sIn .35s forwards;
+}
+@keyframes sIn { to{opacity:1;transform:none} }
+.shap-label { font-size:10px; font-family:var(--mono); min-width:170px; }
+.shap-track { flex:1; height:20px; position:relative; }
+.shap-base { position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--border); }
+.shap-bar { position:absolute; height:13px; top:50%; transform:translateY(-50%); border-radius:3px; transition:width .9s ease; }
+.shap-pos { background:var(--danger); left:50%; }
+.shap-neg { background:var(--safe); right:50%; }
+.shap-val { font-size:10px; font-family:var(--mono); min-width:44px; text-align:right; }
+.shap-legend { display:flex; justify-content:space-between; font-size:9px; font-family:var(--mono); color:var(--muted); margin-top:6px; }
+
+/* ── RIGHT SIDEBAR ──────────────── */
+.right { border-left:1px solid var(--border); display:flex; flex-direction:column; gap:0; overflow-y:auto; }
+.right-section { padding:16px; border-bottom:1px solid var(--border); }
+
+/* Feed */
+.feed-item {
+  padding:9px 0; border-bottom:1px solid rgba(30,48,80,.5); cursor:pointer;
+  transition:opacity .15s; animation:fIn .3s ease forwards;
+}
+@keyframes fIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+.feed-item:last-child { border-bottom:none; }
+.feed-item:hover { opacity:.75; }
+.feed-top { display:flex; justify-content:space-between; align-items:center; }
+.feed-threat { font-size:9px; font-family:var(--mono); font-weight:700; }
+.feed-time { font-size:9px; color:var(--muted); font-family:var(--mono); }
+.feed-msg { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Stats grid */
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.statbox { background:var(--s2); border:1px solid var(--border); border-radius:8px; padding:11px; }
+.statbox-n { font-size:20px; font-weight:800; font-family:var(--mono); }
+.statbox-l { font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-top:2px; }
+
+/* Model ring */
+.ring-wrap { display:flex; justify-content:center; margin:10px 0; }
+svg.mring { display:block; }
+.ring-text-main { font-family:var(--mono); font-weight:700; fill:var(--text); }
+.ring-text-sub { font-family:var(--mono); fill:var(--muted); font-size:9px; }
+
+.minfo-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.mkey { font-size:10px; font-family:var(--mono); color:var(--muted); }
+.mval { font-size:11px; font-family:var(--mono); font-weight:700; color:var(--accent); }
+
+/* Recos */
+.reco-item { display:flex; gap:9px; align-items:flex-start; margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid rgba(30,48,80,.5); }
+.reco-item:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.reco-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+.reco-text { font-size:11px; line-height:1.5; }
+.reco-text b { color:var(--accent); font-weight:700; }
+
+/* Toast */
+.toast {
+  position:fixed; bottom:20px; right:20px;
+  background:var(--s2); border:1px solid var(--border); border-radius:9px;
+  padding:10px 16px; font-family:var(--mono); font-size:11px;
+  z-index:999; transform:translateY(70px); opacity:0;
+  transition:all .3s cubic-bezier(.25,1,.5,1);
+}
+.toast.show { transform:none; opacity:1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+@media(max-width:1100px){.layout{grid-template-columns:290px 1fr}.right{display:none}}
+@media(max-width:720px){.layout{grid-template-columns:1fr}.left{border-right:none;border-bottom:1px solid var(--border)}.hdr-right .hstat{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">🛡️</div>
+    <div>
+      <div class="logo-name">Phish<em>Guard</em> XAI</div>
+      <div class="logo-tag">Real ML · SHAP · XGBoost</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="hstat"><div class="hstat-n" id="hTotal">0</div><div class="hstat-l">Analyzed</div></div>
+    <div class="hstat"><div class="hstat-n" style="color:var(--danger)" id="hThreats">0</div><div class="hstat-l">Threats</div></div>
+    <div class="live-badge"><div class="dot"></div>LIVE</div>
+  </div>
+</header>
+
+<div class="layout">
+
+<!-- LEFT -->
+<div class="left panel">
+  <!-- API Status -->
+  <div class="api-status disconnected" id="apiStatus">
+    <span>⚡</span>
+    <span id="apiStatusText">Connecting to ML API…</span>
+  </div>
+
+  <!-- Input -->
+  <div class="card">
+    <div class="card-body">
+      <div class="panel-title">Analyze Input</div>
+      <div class="ch-tabs">
+        <button class="chtab on" onclick="setCh('email',this)">✉ Email</button>
+        <button class="chtab" onclick="setCh('chat',this)">💬 Chat</button>
+        <button class="chtab" onclick="setCh('url',this)">🔗 URL</button>
+      </div>
+      <textarea class="inp" id="inputText" placeholder="Paste email body, chat message, or URL…&#10;&#10;Ctrl+Enter to analyze"></textarea>
+      <div class="meta">
+        <input class="mini" id="senderInput" placeholder="Sender / From">
+        <input class="mini" id="subjectInput" placeholder="Subject">
+      </div>
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">⚡ Analyze Threat</button>
+    </div>
+  </div>
+
+  <!-- Samples -->
+  <div class="card">
+    <div class="card-body">
+      <div class="panel-title">Attack Samples</div>
+      <div class="sample" onclick="loadSample(0)">
+        <span class="sbadge sp">PHISHING</span>
+        <div class="stitle">Credential Harvesting</div>
+        <div class="sdesc">Fake bank urgent login</div>
+      </div>
+      <div class="sample" onclick="loadSample(1)">
+        <span class="sbadge sp">BEC FRAUD</span>
+        <div class="stitle">CEO Wire Transfer</div>
+        <div class="sdesc">Business email compromise</div>
+      </div>
+      <div class="sample" onclick="loadSample(2)">
+        <span class="sbadge sw">SPEAR PHISH</span>
+        <div class="stitle">IT Support Impersonation</div>
+        <div class="sdesc">Fake VPN password reset</div>
+      </div>
+      <div class="sample" onclick="loadSample(3)">
+        <span class="sbadge sp">MALWARE</span>
+        <div class="stitle">Macro Dropper</div>
+        <div class="sdesc">.xlsm invoice attachment</div>
+      </div>
+      <div class="sample" onclick="loadSample(4)">
+        <span class="sbadge ss">SAFE</span>
+        <div class="stitle">Legitimate Newsletter</div>
+        <div class="sdesc">Real product update</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CENTER -->
+<div class="center" id="centerPanel">
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">No Analysis Yet</div>
+    <div class="empty-sub">Enter text or pick a sample. The real XGBoost model with SHAP explainability will analyze it instantly.</div>
+  </div>
+
+  <div id="resultArea" style="display:none">
+    <div class="result-card" id="resultCard">
+
+      <div class="verdict" id="verdictBar">
+        <div class="v-left">
+          <div class="v-icon" id="vIcon">—</div>
+          <div>
+            <div class="v-label" id="vLabel">—</div>
+            <div class="v-sub" id="vSub">—</div>
+          </div>
+        </div>
+        <div class="v-score">
+          <div class="v-num" id="vScore">—</div>
+          <div class="v-num-label">Threat Score</div>
+        </div>
+      </div>
+
+      <div class="sbar-wrap">
+        <div class="sbar-track"><div class="sbar-fill" id="sbarFill" style="width:0%"></div></div>
+        <div class="sbar-labels">
+          <span style="color:var(--safe)">Safe ◀ 0</span>
+          <span>30 ── 65</span>
+          <span>100 ▶</span>
+          <span style="color:var(--danger)">Phishing</span>
+        </div>
+      </div>
+
+      <div class="inds">
+        <div class="ind"><div class="ind-val" id="i0">—</div><div class="ind-name">Urgency</div><div class="ind-bar"><div class="ind-fill" id="ib0" style="width:0%"></div></div></div>
+        <div class="ind"><div class="ind-val" id="i1">—</div><div class="ind-name">Deception</div><div class="ind-bar"><div class="ind-fill" id="ib1" style="width:0%"></div></div></div>
+        <div class="ind"><div class="ind-val" id="i2">—</div><div class="ind-name">Authority</div><div class="ind-bar"><div class="ind-fill" id="ib2" style="width:0%"></div></div></div>
+        <div class="ind"><div class="ind-val" id="i3">—</div><div class="ind-name">Payload</div><div class="ind-bar"><div class="ind-fill" id="ib3" style="width:0%"></div></div></div>
+      </div>
+
+      <div class="tags" id="tagsRow"></div>
+
+      <div style="padding:0 22px 4px"><div class="panel-title">Flagged Regions</div></div>
+      <div class="hl-box" id="hlBox"></div>
+
+      <div class="xai-section">
+        <div class="xai-head blue">Feature Importance (XGBoost)</div>
+        <div id="featBars"></div>
+      </div>
+
+      <div class="xai-section" style="border-top:1px solid var(--border)">
+        <div class="xai-head pink">SHAP Value Breakdown</div>
+        <div id="shapRows"></div>
+        <div class="shap-legend">
+          <span style="color:var(--safe)">◀ Reduces risk (−SHAP)</span>
+          <span style="color:var(--danger)">Increases risk (+SHAP) ▶</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+  <div class="right-section">
+    <div class="panel-title">Live Threat Feed</div>
+    <div id="feedList"></div>
+  </div>
+
+  <div class="right-section">
+    <div class="panel-title">Session Stats</div>
+    <div class="stat-grid">
+      <div class="statbox"><div class="statbox-n" style="color:var(--danger)" id="sPhish">0</div><div class="statbox-l">Phishing</div></div>
+      <div class="statbox"><div class="statbox-n" style="color:var(--warn)" id="sSus">0</div><div class="statbox-l">Suspicious</div></div>
+      <div class="statbox"><div class="statbox-n" style="color:var(--safe)" id="sSafe">0</div><div class="statbox-l">Safe</div></div>
+      <div class="statbox"><div class="statbox-n" style="color:var(--accent)" id="sAvg">0</div><div class="statbox-l">Avg Score</div></div>
+    </div>
+  </div>
+
+  <div class="right-section">
+    <div class="panel-title">Model</div>
+    <div class="minfo-row"><span class="mkey">Architecture</span><span class="mval">XGBoost</span></div>
+    <div class="minfo-row"><span class="mkey">XAI Method</span><span class="mval">SHAP Tree</span></div>
+    <div class="minfo-row"><span class="mkey">Features</span><span class="mval" id="mFeats">37</span></div>
+    <div class="minfo-row"><span class="mkey">F1 Score</span><span class="mval" id="mF1">—</span></div>
+    <div class="minfo-row"><span class="mkey">ROC-AUC</span><span class="mval" id="mAuc">—</span></div>
+    <div class="ring-wrap">
+      <svg width="110" height="110" class="mring" viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r="44" fill="none" stroke="#1a2540" stroke-width="9"/>
+        <circle cx="55" cy="55" r="44" fill="none" stroke="url(#rg)" stroke-width="9"
+          stroke-dasharray="276.46" stroke-dashoffset="0" stroke-linecap="round"
+          transform="rotate(-90 55 55)" id="ringFill"/>
+        <defs>
+          <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00d4ff"/>
+            <stop offset="100%" stop-color="#06d6a0"/>
+          </linearGradient>
+        </defs>
+        <text x="55" y="51" text-anchor="middle" class="ring-text-main" font-size="16" id="ringPct">—</text>
+        <text x="55" y="64" text-anchor="middle" class="ring-text-sub">Accuracy</text>
+      </svg>
+    </div>
+    <div class="minfo-row"><span class="mkey">False Pos Rate</span><span class="mval" style="color:var(--safe)" id="mFP">—</span></div>
+    <div class="minfo-row"><span class="mkey">CV F1 Mean</span><span class="mval" id="mCV">—</span></div>
+  </div>
+
+  <div class="right-section" id="recoSection" style="display:none">
+    <div class="panel-title">Recommendations</div>
+    <div id="recoList"></div>
+  </div>
+</div>
+
+</div><!-- .layout -->
+</div><!-- .wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000';  // FastAPI backend
+let apiConnected = false;
+
+// ── SAMPLES ───────────────────────────────────────────────────────────────────
+const SAMPLES = [
+  { ch:'email', sender:'security@bankofamerica-verify.net', subject:'URGENT: Your account has been suspended',
+    body:`Dear Customer,\n\nWe have detected UNUSUAL ACTIVITY on your account. Your account has been TEMPORARILY SUSPENDED for security reasons.\n\nYou must verify your identity IMMEDIATELY or your account will be permanently closed within 24 hours.\n\nCLICK HERE: http://bankofamerica-secure-login.xyz/verify\n\nProvide your Social Security Number, account password, and credit card details.\n\nThis is your FINAL WARNING.\n\nSecurity Team` },
+  { ch:'email', sender:'ceo.johnson@acme-corp.net', subject:'Urgent wire transfer needed - confidential',
+    body:`Hi,\n\nI need you to process a wire transfer urgently. I'm in a board meeting and cannot talk.\n\nAmount: $47,500\nRecipient: Shenzhen Trade Partners Ltd\nAccount: 8827364910\nRouting: 091000019\n\nComplete before 3pm today. Confidential acquisition deal. Do not discuss with anyone in the office.\n\nThanks,\nRobert Johnson, CEO` },
+  { ch:'chat', sender:'IT-Support@company-helpdesk.co', subject:'Password Expiry Notice',
+    body:`[IT Support]: Your VPN password expires in 2 hours. Reset now at:\nhttp://reset.company-helpdesk.co/vpn-reset\n\nEnter your current credentials first to verify your identity, then create a new password.\n\nIf not reset, your account will be locked for 3-5 business days.\n\nIT Support Team` },
+  { ch:'email', sender:'billing@invoices-express.net', subject:'Invoice #INV-2024-0847 — ACTION REQUIRED',
+    body:`Dear Accounts Payable,\n\nPlease find attached Invoice #INV-2024-0847 for $12,400 for services rendered in November.\n\nDue within 5 business days. To process, open the attached file (Invoice_2024_0847.xlsm) and enable macros to view full invoice details.\n\nBilling Department\nInvoicesExpress Ltd` },
+  { ch:'email', sender:'newsletter@notion.so', subject:"What's new in Notion — December Update",
+    body:`Hi there,\n\nWe've shipped exciting updates this month:\n- AI writing assistant improvements\n- Better database formulas\n- Calendar view updates\n- Improved mobile experience\n\nRead the changelog at https://www.notion.so/releases\n\nHappy building!\nThe Notion Team\n\nUnsubscribe | Privacy Policy | Help Center` },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let channel = 'email', total=0, threats=0, safe=0, sus=0, scoreSum=0;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  initFeed();
+  await checkAPI();
+  setInterval(addLiveFeed, 9000);
+}
+
+async function checkAPI() {
+  try {
+    const r = await fetch(`${API_BASE}/health`, {signal: AbortSignal.timeout(3000)});
+    if (r.ok) {
+      const d = await r.json();
+      apiConnected = true;
+      setApiStatus(true, `ML API connected · F1=${d.f1_score}`);
+      // Load model info
+      const mi = await fetch(`${API_BASE}/model-info`);
+      const md = await mi.json();
+      applyModelInfo(md);
+    }
+  } catch {
+    apiConnected = false;
+    setApiStatus(false, 'API offline — using local heuristics');
+    applyModelInfo({f1_score:'—(offline)',roc_auc:'—',false_pos_rate:'—',cv_f1_mean:'—',n_features:37});
+  }
+}
+
+function setApiStatus(ok, msg) {
+  const el = document.getElementById('apiStatus');
+  el.className = `api-status ${ok?'connected':'disconnected'}`;
+  el.innerHTML = `<span>${ok?'🟢':'🟡'}</span><span>${msg}</span>`;
+}
+
+function applyModelInfo(md) {
+  document.getElementById('mF1').textContent   = md.f1_score || '—';
+  document.getElementById('mAuc').textContent  = md.roc_auc || '—';
+  document.getElementById('mFP').textContent   = md.false_pos_rate ? (md.false_pos_rate*100).toFixed(1)+'%' : '—';
+  document.getElementById('mCV').textContent   = md.cv_f1_mean || '—';
+  document.getElementById('mFeats').textContent= md.n_features || 37;
+  const acc = md.f1_score && md.f1_score !== '—' ? md.f1_score : 1.0;
+  const pct = Math.round(acc * 100);
+  document.getElementById('ringPct').textContent = pct+'%';
+  const circ = 276.46;
+  document.getElementById('ringFill').setAttribute('stroke-dashoffset', circ - (circ * acc));
+}
+
+// ── FEED ──────────────────────────────────────────────────────────────────────
+const FEED_DATA = [
+  {t:'PHISHING', m:'Fake PayPal login — credential harvest', c:'var(--danger)'},
+  {t:'BEC', m:'CFO impersonation — gift card request', c:'var(--danger)'},
+  {t:'MALWARE', m:'.xlsm macro dropper — invoice pretext', c:'var(--a2)'},
+  {t:'SAFE', m:'GitHub PR notification — verified domain', c:'var(--safe)'},
+  {t:'SPEAR', m:'IT impersonation — VPN reset scam', c:'var(--warn)'},
+  {t:'SAFE', m:'Jira issue assigned — atlassian.net', c:'var(--safe)'},
+];
+let fi=0;
+function initFeed() {
+  FEED_DATA.forEach((f,i) => addFeedEl(f.t, f.m, f.c, `${i*14}s ago`, i*60));
+}
+function addLiveFeed() {
+  const live = [{t:'PHISHING',m:'Amazon spoof — domain mismatch',c:'var(--danger)'},{t:'SAFE',m:'Zoom recording available — verified',c:'var(--safe)'},{t:'SPEAR',m:'HR salary freeze — impersonation',c:'var(--warn)'}];
+  const f = live[fi%live.length]; fi++;
+  addFeedEl(f.t, f.m, f.c, 'just now', 0);
+}
+function addFeedEl(t, m, c, time, delay) {
+  const fl = document.getElementById('feedList');
+  const el = document.createElement('div');
+  el.className = 'feed-item';
+  el.style.animationDelay = delay+'ms';
+  el.innerHTML = `<div class="feed-top"><span class="feed-threat" style="color:${c}">${t}</span><span class="feed-time">${time}</span></div><div class="feed-msg">${m}</div>`;
+  fl.insertBefore(el, fl.firstChild);
+  if (fl.children.length > 10) fl.removeChild(fl.lastChild);
+}
+
+// ── CHANNEL ───────────────────────────────────────────────────────────────────
+function setCh(ch, btn) {
+  channel = ch;
+  document.querySelectorAll('.chtab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('inputText').placeholder = ch==='url' ? 'Paste URL, e.g. http://paypal-secure.xyz/verify' : ch==='chat' ? 'Paste chat message here…' : 'Paste email body here…';
+}
+
+function loadSample(i) {
+  const s = SAMPLES[i];
+  document.getElementById('inputText').value = s.body;
+  document.getElementById('senderInput').value = s.sender;
+  document.getElementById('subjectInput').value = s.subject;
+  showToast(`Loaded: "${s.subject.substring(0,35)}…"`);
+}
+
+// ── ANALYZE ───────────────────────────────────────────────────────────────────
+async function analyze() {
+  const body = document.getElementById('inputText').value.trim();
+  if (!body) { showToast('Enter text to analyze'); return; }
+  const sender = document.getElementById('senderInput').value;
+  const subject = document.getElementById('subjectInput').value;
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.textContent = '⏳ Analyzing…'; btn.classList.add('busy');
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'block';
+
+  let result;
+  if (apiConnected) {
+    try {
+      const r = await fetch(`${API_BASE}/analyze`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({body, subject, sender, channel})
+      });
+      result = await r.json();
+      result = normalizeAPIResult(result);
+    } catch(e) {
+      apiConnected = false;
+      setApiStatus(false, 'API error — using local heuristics');
+      result = localHeuristic(body, sender, subject);
+    }
+  } else {
+    await new Promise(r=>setTimeout(r, 900+Math.random()*600));
+    result = localHeuristic(body, sender, subject);
+  }
+
+  render(result, body);
+  updateStats(result);
+  btn.textContent = '⚡ Analyze Threat'; btn.classList.remove('busy');
+}
+
+function normalizeAPIResult(api) {
+  // Map API response to our render format
+  return {
+    score: api.threat_score_pct,
+    verdict: api.verdict,
+    verdictClass: api.verdict_class === 'danger' ? 'd' : api.verdict_class === 'warn' ? 'w' : 's',
+    icon: api.verdict==='PHISHING'?'🚨':api.verdict==='SUSPICIOUS'?'⚠️':'✅',
+    sub: `Confidence: ${(api.confidence*100).toFixed(1)}% · Model: ${api.model_version}`,
+    urgency: api.urgency_score, deception: api.deception_score,
+    authority: api.authority_score, payload: api.payload_score,
+    tags: api.attack_types.map(t=>({label:t.label, cls: t.severity==='critical'?'d':t.severity==='high'?'d':t.severity==='medium'?'w':'s'})),
+    shap: api.shap_values.slice(0,10).map(s=>({
+      label: s.feature, val: s.value, pct: Math.round(s.magnitude*50)
+    })),
+    featImps: api.feature_importances.map(f=>({name:f.feature, w:Math.round(f.importance*500), color:'#00d4ff'})),
+    highlights: api.highlighted_spans,
+    recos: api.recommendations,
+    rawText: null
+  };
+}
+
+// ── LOCAL HEURISTIC FALLBACK ──────────────────────────────────────────────────
+function localHeuristic(body, sender, subject) {
+  const t = (body+' '+sender+' '+subject).toLowerCase();
+  let score = 8;
+
+  const check = (words, points) => { const h=words.filter(w=>t.includes(w)).length; score+=h*points; return h; };
+  const urgH   = check(['urgent','immediately','asap','suspended','warning','final','24 hours','expires'],10);
+  const piiH   = check(['password','social security','ssn','credit card','account number','routing'],16);
+  const urlH   = check(['secure-login','verify-account','helpdesk','xyz','reset-password'],12);
+  const wireH  = check(['wire transfer','wiring','gift card','bitcoin','routing number'],18);
+  const macroH = check(['enable macros','enable content','.xlsm','.docm'],25);
+  const secH   = check(['confidential','do not discuss','between us',"don't tell"],14);
+  const threatH= check(['terminated','locked','deleted','deactivated','banned'],10);
+  const safeH  = check(['unsubscribe','privacy policy','terms of service'],1);
+  score = Math.min(Math.max(score-safeH*10, 3), 99);
+
+  const vc = score>=70?'d':score>=40?'w':'s';
+  const verdict = score>=70?'PHISHING':score>=40?'SUSPICIOUS':'SAFE';
+  const icon = score>=70?'🚨':score>=40?'⚠️':'✅';
+
+  const tags=[];
+  if(macroH) tags.push({label:'Malware Delivery',cls:'d'});
+  if(wireH&&secH) tags.push({label:'BEC / CEO Fraud',cls:'d'});
+  if(piiH&&urlH) tags.push({label:'Credential Harvesting',cls:'d'});
+  if(urgH>=2) tags.push({label:'Urgency Manipulation',cls:'d'});
+  if(urlH) tags.push({label:'Domain Spoofing',cls:'w'});
+  if(secH) tags.push({label:'Isolation Tactic',cls:'w'});
+  if(score<25) tags.push({label:'Appears Legitimate',cls:'s'});
+
+  const shapF = [
+    urgH&&{label:'Urgency word frequency',val:urgH*0.12,pct:urgH*15},
+    piiH&&{label:'PII / credential request',val:piiH*0.16,pct:piiH*18},
+    urlH&&{label:'Suspicious URL pattern',val:urlH*0.14,pct:urlH*16},
+    wireH&&{label:'Wire / financial request',val:wireH*0.18,pct:wireH*20},
+    macroH&&{label:'Macro-enable instruction',val:macroH*0.25,pct:macroH*25},
+    secH&&{label:'Secrecy / isolation tactic',val:secH*0.15,pct:secH*17},
+    safeH&&{label:'Safe signal (unsubscribe)',val:-safeH*0.1,pct:safeH*10},
+    {label:'Base language model',val:score>50?0.08:-0.08,pct:8},
+  ].filter(Boolean);
+
+  const featImps = [
+    {name:'Sender Domain Legitimacy',w:score>=50?15:85,color:score>=50?'var(--safe)':'#ff3c6e'},
+    {name:'Urgency Language',w:Math.min(urgH*20,90),color:'#ff3c6e'},
+    {name:'PII / Credential Request',w:Math.min(piiH*22,95),color:'#ff6b35'},
+    {name:'Suspicious URL Pattern',w:Math.min(urlH*20,88),color:'#ffd166'},
+    {name:'Macro / Attachment Signal',w:Math.min(macroH*30,97),color:'#ff3c6e'},
+    {name:'Wire Transfer Request',w:Math.min(wireH*22,92),color:'#ff3c6e'},
+    {name:'Safe Signals (footer etc.)',w:Math.min(safeH*18,60),color:'var(--safe)'},
+  ].filter(f=>f.w>0);
+
+  const recos=[];
+  if(score>=70) recos.push({icon:'🚫',text:'<b>Block & quarantine</b> immediately.',priority:'critical'});
+  if(score>=40) recos.push({icon:'🔍',text:'<b>Report to SOC</b> team for investigation.',priority:'high'});
+  if(piiH) recos.push({icon:'🔐',text:'<b>Never enter credentials</b> on linked pages.',priority:'critical'});
+  if(wireH) recos.push({icon:'📞',text:'<b>Verify wire requests</b> by phone — never email alone.',priority:'critical'});
+  if(macroH) recos.push({icon:'⚙️',text:'<b>Never enable macros</b> from unknown senders.',priority:'critical'});
+  if(score<25) recos.push({icon:'✅',text:'<b>Email appears safe</b> — no action required.',priority:'info'});
+  if(!recos.length) recos.push({icon:'👁️',text:'<b>Verify</b> with sender via alternate channel.',priority:'medium'});
+
+  return {
+    score, verdict, verdictClass:vc, icon,
+    sub:`Heuristic analysis · ${Object.keys({urgH,piiH,urlH,wireH,macroH}).length} signal groups`,
+    urgency:Math.min(urgH*20+threatH*15,100), deception:Math.min(urlH*25+piiH*20+macroH*30,100),
+    authority:Math.min(20,100), payload:Math.min(piiH*25+wireH*20+macroH*40,100),
+    tags, shap:shapF, featImps, highlights:[], recos, rawText:body
+  };
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(r, rawText) {
+  // Verdict
+  document.getElementById('verdictBar').className = `verdict ${r.verdictClass}`;
+  document.getElementById('vIcon').textContent = r.icon;
+  document.getElementById('vLabel').textContent = r.verdict;
+  document.getElementById('vLabel').style.color = r.verdictClass==='d'?'var(--danger)':r.verdictClass==='w'?'var(--warn)':'var(--safe)';
+  document.getElementById('vSub').textContent = r.sub;
+  document.getElementById('vScore').textContent = r.score;
+  document.getElementById('vScore').style.color = r.verdictClass==='d'?'var(--danger)':r.verdictClass==='w'?'var(--warn)':'var(--safe)';
+
+  // Score bar
+  const fill = document.getElementById('sbarFill');
+  fill.style.width = r.score+'%';
+  fill.style.background = r.score>=70?'linear-gradient(90deg,#ff6b8a,var(--danger))':r.score>=40?'linear-gradient(90deg,#ffe066,var(--warn))':'linear-gradient(90deg,#06d6a0,#00ffcc)';
+
+  // Indicators
+  const inds = [r.urgency||0, r.deception||0, r.authority||0, r.payload||0];
+  inds.forEach((v,i) => {
+    const el = document.getElementById('i'+i);
+    el.textContent = v+'%';
+    el.style.color = v>=70?'var(--danger)':v>=40?'var(--warn)':'var(--safe)';
+    const bar = document.getElementById('ib'+i);
+    bar.style.width = v+'%';
+    bar.style.background = v>=70?'var(--danger)':v>=40?'var(--warn)':'var(--safe)';
+  });
+
+  // Tags
+  document.getElementById('tagsRow').innerHTML = (r.tags||[]).map(t=>`<span class="tag t${t.cls}">${t.label}</span>`).join('');
+
+  // Highlighted text
+  const hlBox = document.getElementById('hlBox');
+  if (r.highlights && r.highlights.length > 0 && rawText) {
+    hlBox.innerHTML = buildHighlight(rawText, r.highlights);
+  } else {
+    hlBox.innerHTML = (rawText || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  // Feature importances
+  const fi = r.featImps || r.featureImps || [];
+  document.getElementById('featBars').innerHTML = fi.map(f=>{
+    const w = Math.min(f.w||0, 100);
+    return `<div class="feat-row">
+      <div class="feat-name">${f.name}</div>
+      <div class="feat-track"><div class="feat-fill" style="width:${w}%;background:${f.color||'var(--accent)'}">${w>20?w+'%':''}</div></div>
+      <div class="feat-pct">${w}%</div>
+    </div>`;
+  }).join('');
+
+  // SHAP
+  const maxShap = Math.max(...(r.shap||[]).map(s=>Math.abs(s.val)), 0.01);
+  document.getElementById('shapRows').innerHTML = (r.shap||[]).map((s,i)=>{
+    const isPos = s.val >= 0;
+    const barW = Math.round(Math.abs(s.val)/maxShap * 45);
+    return `<div class="shap-row" style="animation-delay:${i*0.06}s">
+      <div class="shap-label">${s.label}</div>
+      <div class="shap-track">
+        <div class="shap-base"></div>
+        <div class="shap-bar ${isPos?'shap-pos':'shap-neg'}" style="width:${barW}%"></div>
+      </div>
+      <div class="shap-val" style="color:${isPos?'var(--danger)':'var(--safe)'}">${s.val>=0?'+':''}${typeof s.val==='number'?s.val.toFixed(3):s.val}</div>
+    </div>`;
+  }).join('');
+
+  // Recommendations
+  const recos = r.recos || [];
+  if (recos.length) {
+    document.getElementById('recoSection').style.display = 'block';
+    document.getElementById('recoList').innerHTML = recos.map(rec=>`
+      <div class="reco-item">
+        <div class="reco-icon">${rec.icon||'•'}</div>
+        <div class="reco-text">${rec.text}</div>
+      </div>`).join('');
+  }
+}
+
+function buildHighlight(text, spans) {
+  // Build simple highlighted version from spans
+  let html = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const highlights = spans.slice(0,8);
+  highlights.forEach(span => {
+    const word = (span.text||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if (!word) return;
+    const cls = span.severity === 'danger' ? 'hd' : 'hw';
+    const title = span.reason || '';
+    html = html.replace(new RegExp(word,'gi'), `<span class="${cls}" title="${title}">$&</span>`);
+  });
+  return html.replace(/\n/g,'<br>');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats(r) {
+  total++; scoreSum += r.score;
+  if (r.score >= 70) { threats++; document.getElementById('sPhish').textContent=threats; }
+  else if (r.score >= 40) { sus++; document.getElementById('sSus').textContent=sus; }
+  else { safe++; document.getElementById('sSafe').textContent=safe; }
+  document.getElementById('hTotal').textContent = total;
+  document.getElementById('hThreats').textContent = threats+sus;
+  document.getElementById('sAvg').textContent = Math.round(scoreSum/total);
+
+  // Add to live feed
+  const color = r.score>=70?'var(--danger)':r.score>=40?'var(--warn)':'var(--safe)';
+  const snippet = document.getElementById('inputText').value.substring(0,42).replace(/\n/g,' ')+'…';
+  addFeedEl(r.verdict, snippet, color, 'just now', 0);
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key==='Enter') analyze();
+});
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
